@@ -5,9 +5,9 @@ on:
         branches:
             - main
 
-jobs:
+jobs:    
     build:
-        runs-on: ubuntu-24.04-arm
+        runs-on: ubuntu-24.04-arm        
         environment: staging
         steps:
             - name: Checkout Repository
@@ -36,6 +36,9 @@ jobs:
 
     deploy:
         runs-on: ubuntu-24.04-arm
+        strategy:
+            matrix:
+                environment: [staging]
         needs: build
         environment: 
             name: staging
@@ -46,6 +49,6 @@ jobs:
                 AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
                 AWS_REGION: "eu-west-2"
               run: |
-                aws lambda update-function-code --function-name wordlist-${{ github.environment }}-$(basename ${GITHUB_REPOSITORY}) \
+                aws lambda update-function-code --function-name wordlist-${{ matrix.environment }}-$(basename ${GITHUB_REPOSITORY}) \
                   --s3-bucket ${{ vars.DEPLOYMENT_BUCKET_NAME }} \
                   --s3-key $(basename ${GITHUB_REPOSITORY}).zip
