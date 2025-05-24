@@ -25,6 +25,8 @@ type Source struct {
 
 func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 
+	log.Printf("Full request: %+v", req.RequestContext)
+
 	if req.RequestContext.HTTP.Method == http.MethodGet {
 		log.Println("Processing GET request without auth")
 		return getHandler(req)
