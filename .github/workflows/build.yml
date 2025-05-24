@@ -8,6 +8,7 @@ on:
 jobs:
     build:
         runs-on: ubuntu-24.04-arm
+        environment: staging
         steps:
             - name: Checkout Repository
               uses: actions/checkout@v4
