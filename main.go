@@ -26,17 +26,21 @@ type Source struct {
 func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 
 	if req.RequestContext.HTTP.Method == http.MethodGet {
+		log.Println("Processing GET request without auth")
 		return getHandler(req)
 	}
 
+	log.Println("Enforcing auth for write request")
 	if req.RequestContext.Authorizer == nil ||
 		req.RequestContext.Authorizer.JWT == nil ||
 		req.RequestContext.Authorizer.JWT.Claims == nil {
+		log.Println("Missing auth information, rejecting")
 		return unauthorized()
 	}
 
 	scope := req.RequestContext.Authorizer.JWT.Claims["scope"]
 	if scope != "https://wordlist.gaul.tech/write" {
+		log.Println("Missing scope, rejecting")
 		return unauthorized()
 	}
 
