@@ -29,6 +29,12 @@ func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPRespons
 		return getHandler(req)
 	}
 
+	if req.RequestContext.Authorizer == nil ||
+		req.RequestContext.Authorizer.JWT == nil ||
+		req.RequestContext.Authorizer.JWT.Claims == nil {
+		return unauthorized()
+	}
+
 	scope := req.RequestContext.Authorizer.JWT.Claims["scope"]
 	if scope != "https://wordlist.gaul.tech/write" {
 		return unauthorized()
