@@ -27,27 +27,9 @@ func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPRespons
 
 	log.Printf("Full request: %+v", req.RequestContext)
 
-	if req.RequestContext.HTTP.Method == http.MethodGet {
-		log.Println("Processing GET request without auth")
-		return getHandler(req)
-	}
-
-	log.Printf("Received HTTP method: %s\n", req.RequestContext.HTTP.Method)
-	log.Println("Enforcing auth for write request")
-	if req.RequestContext.Authorizer == nil ||
-		req.RequestContext.Authorizer.JWT == nil ||
-		req.RequestContext.Authorizer.JWT.Claims == nil {
-		log.Println("Missing auth information, rejecting")
-		return unauthorized()
-	}
-
-	scope := req.RequestContext.Authorizer.JWT.Claims["scope"]
-	if scope != "https://staging.wordlist.gaul.tech/write" {
-		log.Println("Missing scope, rejecting")
-		return unauthorized()
-	}
-
 	switch req.RequestContext.HTTP.Method {
+	case http.MethodGet:
+		return getHandler(req)
 	case http.MethodPost:
 		return postHandler(req)
 	case http.MethodPut:
