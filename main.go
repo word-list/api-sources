@@ -23,21 +23,26 @@ type Source struct {
 	Url  string `json:"url"`
 }
 
-func handler(request events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
-	switch request.HTTPMethod {
-	case http.MethodGet:
-		return getHandler(request)
+func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
+
+	if req.RequestContext.HTTP.Method == http.MethodGet {
+		return getHandler(req)
+	}
+
+	scope := req.RequestContext.Authorizer.JWT.Claims["scope"]
+	if scope != "https://wordlist.gaul.tech/write" {
+		return unauthorized()
+	}
+
+	switch req.RequestContext.HTTP.Method {
 	case http.MethodPost:
-		return postHandler(request)
+		return postHandler(req)
 	case http.MethodPut:
-		return putHandler(request)
+		return putHandler(req)
 	case http.MethodDelete:
-		return deleteHandler(request)
+		return deleteHandler(req)
 	default:
-		return events.APIGatewayProxyResponse{
-			StatusCode: http.StatusMethodNotAllowed,
-			Body:       "unsupported http method",
-		}, nil
+		return notAllowed()
 	}
 }
 
@@ -61,7 +66,7 @@ func getSourceFromRecord(rec map[string]types.AttributeValue) Source {
 	}
 }
 
-func getAllHandler() (events.APIGatewayProxyResponse, error) {
+func getAllHandler() (events.APIGatewayV2HTTPResponse, error) {
 
 	svc, err := getDynamoDbService()
 	if err != nil {
@@ -89,7 +94,7 @@ func getAllHandler() (events.APIGatewayProxyResponse, error) {
 	return ok(string(responseBody))
 }
 
-func getHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func getHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 
 	id := req.PathParameters["id"]
 	if id == "" {
@@ -117,7 +122,7 @@ func getHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	}
 
 	if result.Item == nil {
-		return events.APIGatewayProxyResponse{StatusCode: 404, Body: `{"error": "not found"}`}, nil
+		return events.APIGatewayV2HTTPResponse{StatusCode: 404, Body: `{"error": "not found"}`}, nil
 	}
 
 	source := getSourceFromRecord(result.Item)
@@ -126,28 +131,42 @@ func getHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return ok(string(responseBody))
 }
 
-func serverError(message string) (events.APIGatewayProxyResponse, error) {
-	return events.APIGatewayProxyResponse{
+func serverError(message string) (events.APIGatewayV2HTTPResponse, error) {
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode: http.StatusInternalServerError,
 		Body:       fmt.Sprintf(`{"error": "%s"}`, message),
 	}, nil
 }
 
-func ok(content string) (events.APIGatewayProxyResponse, error) {
-	return events.APIGatewayProxyResponse{
+func ok(content string) (events.APIGatewayV2HTTPResponse, error) {
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode: http.StatusOK,
 		Body:       content,
 	}, nil
 }
 
-func created(content string) (events.APIGatewayProxyResponse, error) {
-	return events.APIGatewayProxyResponse{
+func created(content string) (events.APIGatewayV2HTTPResponse, error) {
+	return events.APIGatewayV2HTTPResponse{
 		StatusCode: http.StatusCreated,
 		Body:       content,
 	}, nil
 }
 
-func postHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func unauthorized() (events.APIGatewayV2HTTPResponse, error) {
+	return events.APIGatewayV2HTTPResponse{
+		StatusCode: http.StatusUnauthorized,
+		Body:       `{"error": "Unauthorised"}`,
+	}, nil
+}
+
+func notAllowed() (events.APIGatewayV2HTTPResponse, error) {
+	return events.APIGatewayV2HTTPResponse{
+		StatusCode: http.StatusMethodNotAllowed,
+		Body:       `{"error": "Unsupported HTTP method"}`,
+	}, nil
+}
+
+func postHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	var source Source
 	json.Unmarshal([]byte(req.Body), &source)
 
@@ -175,7 +194,7 @@ func postHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespo
 	return created(source.ID)
 }
 
-func putHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func putHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 	var source Source
 	json.Unmarshal([]byte(req.Body), &source)
 
@@ -203,7 +222,7 @@ func putHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyRespon
 	return ok(source.ID)
 }
 
-func deleteHandler(req events.APIGatewayProxyRequest) (events.APIGatewayProxyResponse, error) {
+func deleteHandler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPResponse, error) {
 
 	id := req.PathParameters["id"]
 	if id == "" {
