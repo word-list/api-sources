@@ -30,6 +30,7 @@ func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPRespons
 		return getHandler(req)
 	}
 
+	log.Printf("Received HTTP method: %s\n", req.RequestContext.HTTP.Method)
 	log.Println("Enforcing auth for write request")
 	if req.RequestContext.Authorizer == nil ||
 		req.RequestContext.Authorizer.JWT == nil ||
@@ -39,7 +40,7 @@ func handler(req events.APIGatewayV2HTTPRequest) (events.APIGatewayV2HTTPRespons
 	}
 
 	scope := req.RequestContext.Authorizer.JWT.Claims["scope"]
-	if scope != "https://wordlist.gaul.tech/write" {
+	if scope != "https://staging.wordlist.gaul.tech/write" {
 		log.Println("Missing scope, rejecting")
 		return unauthorized()
 	}
